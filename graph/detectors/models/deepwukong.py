@@ -8,9 +8,6 @@ class ModelParser(Tap):
     layer_num: int = 3  # GNN层数
     rnn_layer_num: int = 1 # RNN层数
     num_classes: int = 2
-    with_sym: bool = True
-    model_name = 'gcn'
-    detector = 'dwk'
 
 model_args = ModelParser().parse_args(known_only=True)
 
@@ -18,15 +15,10 @@ model_args = ModelParser().parse_args(known_only=True)
 import torch
 import torch.nn as nn
 
-from torch_geometric.nn.conv import GCNConv, gcn_conv
-from torch_geometric.data import Batch, Data
-from torch_geometric.typing import Adj, OptTensor
-from torch import Tensor
-from torch_sparse import SparseTensor
+from torch_geometric.nn.conv import GCNConv
+from torch_geometric.data import Batch
 
-from graph.detectors.common_model import GlobalMaxMeanPool, GCNConvGrad
-
-from typing import List
+from graph.detectors.models.common_model import GlobalMaxMeanPool
 
 
 class DeepWuKongModel(nn.Module):

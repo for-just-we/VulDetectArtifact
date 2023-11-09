@@ -28,8 +28,7 @@ class ModelParser(Tap):
     hidden_size: int = 256  # GNN隐层向量维度
     layer_num: int = 3  # GNN层数
     num_classes: int = 2
-    model_name = 'ggnn'
-    detector = 'devign'
+
 
 model_args = ModelParser().parse_args(known_only=True)
 
@@ -39,7 +38,7 @@ import torch
 
 from torch_geometric.nn.conv import GatedGraphConv
 from torch_geometric.data import Batch
-from graph.detectors.common_model import GlobalMaxPool
+from graph.detectors.models.common_model import GlobalMaxPool
 
 # Devign分类模型
 class DevignModel(nn.Module):

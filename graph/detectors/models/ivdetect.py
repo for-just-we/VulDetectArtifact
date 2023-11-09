@@ -8,8 +8,6 @@ class ModelParser(Tap):
     num_layers: int = 3  # GNN层数
     dropout_rate: float = 0.3
 
-    model_name = 'gcn'
-    detector = "ivdetect"
 
 model_args = ModelParser().parse_args(known_only = True)
 
@@ -24,7 +22,7 @@ from torch_geometric.data import Data, Batch
 from torch.nn.utils.rnn import pad_packed_sequence, pack_sequence
 
 from typing import List, Tuple
-from graph.detectors.common_model import GlobalMaxPool, GCNConvGrad
+from graph.detectors.models.common_model import GlobalMaxPool, GCNConvGrad
 
 
 class IVDetectModel(nn.Module):
