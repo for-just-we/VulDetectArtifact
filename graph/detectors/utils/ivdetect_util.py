@@ -2,73 +2,138 @@ from gensim.models import Word2Vec
 import numpy as np
 import json
 from typing import Dict, List, Tuple, Set
-from graph.detectors.models.ivdetect import model_args
-import torch
+import re
 from treelstm import calculate_evaluation_orders
+import torch
 
-from CppCodeAnalyzer.mainTool.ast.astNode import ASTNode
-from CppCodeAnalyzer.mainTool.ast.builders import json2astNode
-from CppCodeAnalyzer.extraTools.vuldetect.ivdetect import lexical_parse, generate_feature3, find_control, find_data
+from graph.detectors.models.ivdetect import model_args
+from utils.ast_def import ASTNode, json2astNode
+from utils.ast_analyzer import ASTVarAnalyzer
+from utils.ast_traverse_util import ASTNodeASTProvider
+
+# parsing the contents in a AST node into its sub token sequence, generating feature 1
+# code in https://github.com/vulnerabilitydetection/VulnerabilityDetectionResearch/blob/new_implementation/IVDetect/utils/process.py#L138 could
+# produce errors when parsing identifiers like TASK_SIZE_MAX with all upper case
+def lexical_parse(line: str) -> List[str]:
+    tokens = line.split(" ")
+    filtered_set = ['', ' ', '	', ',', '\n', ';', '(', ')', '<', '>', '{', '}', '[', ']', '``', '\'\'', '\"', "'"]
+
+    tokens = list(filter(lambda t: t not in filtered_set, tokens))
+    new_tokens = list()
+    for token in tokens:
+        if token.isalpha():
+            new_tokens.extend(re.findall("[a-zA-Z][^A-Z]*", token))
+        else:
+        # 按下划线分割
+            new_tokens.extend([t for t in token.split('_') if t != ''])
+    return new_tokens
+
+
+'''
+Feature 4 (control dependence) and Feature 5 (data dependence)
+'''
+# search for other statements have control dependence with this
+def find_control(cur_stmt_idx: int, cdg_edge_idxs: Dict[int, int], seq: List[int], depth: int, limit: int):
+    record = []
+    if cur_stmt_idx in cdg_edge_idxs.keys():
+        control_stmt = cdg_edge_idxs[cur_stmt_idx]
+        seq.append(control_stmt)
+        record.append(control_stmt)
+    if depth < limit:
+        for stmt in record:
+            find_control(stmt, cdg_edge_idxs, seq, depth + 1, limit)
+
+# search for statements have data dependence with this
+def find_data(cur_stmt_idx: int, ddg_edge_idxs: Dict[int, Set[int]], seq: List[int], depth: int, limit: int):
+    record = []
+    if cur_stmt_idx in ddg_edge_idxs.keys():
+        for data_stmt in ddg_edge_idxs[cur_stmt_idx]:
+            seq.append(data_stmt)
+            record.append(data_stmt)
+    if depth < limit:
+        for stmt in record:
+            find_data(stmt, ddg_edge_idxs, seq, depth + 1, limit)
+
+
+# control dependence features
+def generate_feature4(cpg: Dict, limit: int = 1) -> List[List[List[str]]]:
+    edges = [json.loads(edge) for edge in cpg["cdgEdges"]]
+    cdg_edge_idxs: Dict[int, int] = {edge[1]: edge[0] for edge in edges}
+    nodes_infos: List[Dict] = cpg["nodes"]
+    #  每个statement的控制依赖结点
+    cd_idxs_for_stmt: List[List[int]] = list()
+    for stmt_idx in range(len(nodes_infos)):
+        seq: List[int] = list()
+        find_control(stmt_idx, cdg_edge_idxs, seq, 1, limit)
+        cd_idxs_for_stmt.append(seq)
+
+    feature4_for_stmts: List[List[List[str]]] = list()
+    for cd_idxs in cd_idxs_for_stmt:
+        sub_tokens_in_stmts: List[List[str]] = [lexical_parse(nodes_infos[idx]["contents"][0][1])
+                                                    for idx in cd_idxs]
+        feature4_for_stmts.append(sub_tokens_in_stmts)
+
+    return feature4_for_stmts
+
+# data dependence features
+def generate_feature5(cpg: Dict, limit: int = 1) -> List[List[List[str]]]:
+    edges = [json.loads(edge) for edge in cpg["ddgEdges"]]
+    ddg_edge_idxs: Dict[int, Set[int]] = dict()
+    for edge in edges:
+        # source -> destination
+        if edge[1] not in ddg_edge_idxs.keys():
+            ddg_edge_idxs[edge[1]] = {edge[0]}
+        else:
+            ddg_edge_idxs[edge[1]].add(edge[0])
+
+        # destination -> source
+        if edge[0] not in ddg_edge_idxs.keys():
+            ddg_edge_idxs[edge[0]] = {edge[1]}
+        else:
+            ddg_edge_idxs[edge[0]].add(edge[1])
+
+    nodes_infos: List[Dict] = cpg["nodes"]
+    #  每个statement的控制依赖结点
+    dd_idxs_for_stmt: List[List[int]] = list()
+    for stmt_idx in range(len(nodes_infos)):
+        seq: List[int] = list()
+        find_data(stmt_idx, ddg_edge_idxs, seq, 1, limit)
+        dd_idxs_for_stmt.append(seq)
+
+    feature5_for_stmts: List[List[List[str]]] = list()
+    for dd_idxs in dd_idxs_for_stmt:
+        sub_tokens_in_stmts: List[List[str]] = [lexical_parse(nodes_infos[idx]["contents"][0][1])
+                                                    for idx in dd_idxs]
+        feature5_for_stmts.append(sub_tokens_in_stmts)
+    return feature5_for_stmts
+
+'''
+Feature 3: Var and Type sequence
+'''
+def generate_feature3(statements: List[ASTNode]):
+    astVarAnalyzer: ASTVarAnalyzer = ASTVarAnalyzer()
+    varLists: List[list] = list()
+    for statement in statements:
+        provider: ASTNodeASTProvider = ASTNodeASTProvider()
+        provider.node = statement
+        astVarAnalyzer.analyzeAST(provider)
+
+        vars = list()
+        for variable in astVarAnalyzer.variables:
+            vars.extend(lexical_parse(variable))
+            if variable in astVarAnalyzer.var2type.keys():
+                vars.extend(lexical_parse(astVarAnalyzer.var2type[variable]))
+        varLists.append(vars)
+
+    return varLists
+
 
 class IVDetectUtil(object):
-    def __init__(self, w2v_model: Word2Vec):
+    def __init__(self, w2v_model: Word2Vec, device: str):
         self.pretrain_model = w2v_model
+        self.device = device
 
-    # control dependence
-    def generate_feature4(self, cpg: Dict, limit: int = 1) -> List[List[List[str]]]:
-        edges = [json.loads(edge) for edge in cpg["cdgEdges"]]
-        cdg_edge_idxs: Dict[int, int] = {edge[1]: edge[0] for edge in edges}
-        nodes_infos: List[Dict] = cpg["nodes"]
-        #  每个statement的控制依赖结点
-        cd_idxs_for_stmt: List[List[int]] = list()
-        for stmt_idx in range(len(nodes_infos)):
-            seq: List[int] = list()
-            find_control(stmt_idx, cdg_edge_idxs, seq, 1, limit)
-            cd_idxs_for_stmt.append(seq)
-
-        feature4_for_stmts: List[List[List[str]]] = list()
-        for cd_idxs in cd_idxs_for_stmt:
-            sub_tokens_in_stmts: List[List[str]] = [lexical_parse(nodes_infos[idx]["contents"][0][1])
-                                                    for idx in cd_idxs]
-            feature4_for_stmts.append(sub_tokens_in_stmts)
-
-        return feature4_for_stmts
-
-
-    def generate_feature5(self, cpg: Dict, limit: int = 1) -> List[List[List[str]]]:
-        edges = [json.loads(edge) for edge in cpg["ddgEdges"]]
-        ddg_edge_idxs: Dict[int, Set[int]] = dict()
-        for edge in edges:
-            # source -> destination
-            if edge[1] not in ddg_edge_idxs.keys():
-                ddg_edge_idxs[edge[1]] = {edge[0]}
-            else:
-                ddg_edge_idxs[edge[1]].add(edge[0])
-
-            # destination -> source
-            if edge[0] not in ddg_edge_idxs.keys():
-                ddg_edge_idxs[edge[0]] = {edge[1]}
-            else:
-                ddg_edge_idxs[edge[0]].add(edge[1])
-
-        nodes_infos: List[Dict] = cpg["nodes"]
-        #  每个statement的控制依赖结点
-        dd_idxs_for_stmt: List[List[int]] = list()
-        for stmt_idx in range(len(nodes_infos)):
-            seq: List[int] = list()
-            find_data(stmt_idx, ddg_edge_idxs, seq, 1, limit)
-            dd_idxs_for_stmt.append(seq)
-
-        feature5_for_stmts: List[List[List[str]]] = list()
-        for dd_idxs in dd_idxs_for_stmt:
-            sub_tokens_in_stmts: List[List[str]] = [lexical_parse(nodes_infos[idx]["contents"][0][1])
-                                                    for idx in dd_idxs]
-            feature5_for_stmts.append(sub_tokens_in_stmts)
-        return feature5_for_stmts
-
-
-    def generate_all_features(self, data: Dict) -> Tuple[List[torch.Tensor], List[Tuple], List[torch.Tensor], List[torch.Tensor], List[torch.Tensor],
-                                        torch.LongTensor, int]:
+    def generate_all_features(self, data: Dict) -> Tuple[List[torch.Tensor], List[Tuple], List[torch.Tensor], List[torch.Tensor], List[torch.Tensor], torch.LongTensor, int]:
         ## generate feature 1, sub token list
         nodes_infos: List[Dict] = [json.loads(sample) if isinstance(sample, str) else sample for sample in data["nodes"]]
         temp = data["nodes"]
@@ -87,7 +152,7 @@ class IVDetectUtil(object):
             if len(stmt_vector) == 0:
                 stmt_vector.append(np.zeros(shape=(model_args.feature_representation_size)))
             stmt_vector = np.stack(stmt_vector)
-            feature1.append(torch.from_numpy(stmt_vector).to(model_args.device))
+            feature1.append(torch.from_numpy(stmt_vector).to(self.device))
 
 
         ## generate feature2 , AST subtrees
@@ -98,13 +163,13 @@ class IVDetectUtil(object):
             if len(edges) == 0:
                 tokens: List[str] = lexical_parse(ast["contents"][0][1])
                 if len(tokens) == 0:
-                    feature2.append((torch.zeros(size=(model_args.feature_representation_size,)).to(model_args.device),))
+                    feature2.append((torch.zeros(size=(model_args.feature_representation_size,)).to(self.device),))
                     continue
                 vecs = [self.pretrain_model[token] if token in self.pretrain_model.wv.vocab
                                         else np.zeros(shape=(model_args.feature_representation_size)) for token in
                                         tokens]
                 vecs = np.stack(vecs).mean(axis=0)
-                stmt_vector = torch.from_numpy(vecs).to(model_args.device)
+                stmt_vector = torch.from_numpy(vecs).to(self.device)
                 feature2.append((stmt_vector, ))
                 continue
 
@@ -121,7 +186,7 @@ class IVDetectUtil(object):
                 stmt_vectors.append(stmt_vector)
             features = torch.from_numpy(np.stack(stmt_vectors))
             node_order, edge_order = calculate_evaluation_orders(edges, len(features))
-            feature2.append((features.to(model_args.device), edges.to(model_args.device), node_order, edge_order))
+            feature2.append((features.to(self.device), edges.to(self.device), node_order, edge_order))
 
 
         ## generate feature3, variable list
@@ -139,16 +204,16 @@ class IVDetectUtil(object):
             if len(stmt_vector) == 0:
                 stmt_vector.append(np.zeros(shape=(model_args.feature_representation_size)))
             stmt_vector = np.stack(stmt_vector)
-            feature3.append(torch.from_numpy(stmt_vector).to(model_args.device))
+            feature3.append(torch.from_numpy(stmt_vector).to(self.device))
 
         ## generate feature4, control dependence list
-        feature4_for_stmts: List[List[List[str]]] = self.generate_feature4(data, 1)
+        feature4_for_stmts: List[List[List[str]]] = generate_feature4(data, 1)
 
         # List[List[str]]
         feature4 = []
         for feature4_for_stmt in feature4_for_stmts:
             if len(feature4_for_stmt) == 0:
-                feature4.append(torch.zeros(size=(1, model_args.feature_representation_size)).to(model_args.device))
+                feature4.append(torch.zeros(size=(1, model_args.feature_representation_size)).to(self.device))
                 continue
             # List[str]
             vectors = []
@@ -161,16 +226,16 @@ class IVDetectUtil(object):
                                 else np.zeros(shape=(model_args.feature_representation_size)) for token in context]).mean(axis=0)
                 vectors.append(stmt_vector)
             vectors = np.stack(vectors)
-            feature4.append(torch.from_numpy(vectors).to(model_args.device))
+            feature4.append(torch.from_numpy(vectors).to(self.device))
 
         # generate feature 5, data dependence list
-        feature5_for_stmts: List[List[List[str]]] = self.generate_feature5(data, 1)
+        feature5_for_stmts: List[List[List[str]]] = generate_feature5(data, 1)
 
         # List[List[str]]
         feature5 = []
         for feature5_for_stmt in feature5_for_stmts:
             if len(feature5_for_stmt) == 0:
-                feature5.append(torch.zeros(size=(1, model_args.feature_representation_size)).to(model_args.device))
+                feature5.append(torch.zeros(size=(1, model_args.feature_representation_size)).to(self.device))
                 continue
             # vector
             vectors = []
@@ -184,14 +249,15 @@ class IVDetectUtil(object):
                                 else np.zeros(shape=(model_args.feature_representation_size)) for token in context]).mean(axis=0)
                 vectors.append(stmt_vector)
             vectors = np.stack(vectors)
-            feature5.append(torch.from_numpy(vectors).to(model_args.device))
+            feature5.append(torch.from_numpy(vectors).to(self.device))
 
         # edge indexes
         edges = [json.loads(edge)[:2] for edge in data["ddgEdges"]] + [json.loads(edge) for edge in data["cdgEdges"]]
-        edge_index: torch.LongTensor = torch.LongTensor(edges).t().to(model_args.device)
+        edge_index: torch.LongTensor = torch.LongTensor(edges).t().to(self.device)
         # label
         data["nodes"] = temp
         return (feature1, feature2, feature3, feature4, feature5, edge_index, data["target"])
+
 
 
 
@@ -316,7 +382,31 @@ sample1 = {
   }
 
 if __name__ == '__main__':
-    pretrain_model = Word2Vec.load(model_args.pretrain_word2vec_model)
-    ivdetect_util = IVDetectUtil(pretrain_model)
+    def test_gen_feature3():
+        nodes = [
+            "{\"line\":37,\"edges\":[[0,1],[1,2],[1,3]],\"contents\":[[\"IdentifierDeclStatement\",\"charVoid structCharVoid ;\",\"\"],[\"IdentifierDecl\",\"structCharVoid\",\"\"],[\"IdentifierDeclType\",\"charVoid\",\"\"],[\"Identifier\",\"structCharVoid\",\"\"]]}",
+            "{\"line\":38,\"edges\":[[0,1],[1,2],[1,3],[2,4],[2,5],[3,6],[3,7]],\"contents\":[[\"ExpressionStatement\",\"structCharVoid . voidSecond = ( void * ) SRC_STR ;\",\"\"],[\"AssignmentExpr\",\"structCharVoid . voidSecond = ( void * ) SRC_STR\",\"=\"],[\"MemberAccess\",\"structCharVoid . voidSecond\",\"\"],[\"CastExpression\",\"( void * ) SRC_STR\",\"\"],[\"Identifier\",\"structCharVoid\",\"\"],[\"Identifier\",\"voidSecond\",\"\"],[\"CastTarget\",\"void *\",\"\"],[\"Identifier\",\"SRC_STR\",\"\"]]}",
+            "{\"line\":40,\"edges\":[[0,1],[1,2],[1,3],[2,4],[3,5],[5,6],[6,7],[6,8],[8,9],[8,10]],\"contents\":[[\"ExpressionStatement\",\"printLine ( ( char * ) structCharVoid . voidSecond ) ;\",\"\"],[\"CallExpression\",\"printLine ( ( char * ) structCharVoid . voidSecond )\",\"\"],[\"Callee\",\"printLine\",\"\"],[\"ArgumentList\",\"( char * ) structCharVoid . voidSecond\",\"\"],[\"Identifier\",\"printLine\",\"\"],[\"Argument\",\"( char * ) structCharVoid . voidSecond\",\"\"],[\"CastExpression\",\"( char * ) structCharVoid . voidSecond\",\"\"],[\"CastTarget\",\"char *\",\"\"],[\"MemberAccess\",\"structCharVoid . voidSecond\",\"\"],[\"Identifier\",\"structCharVoid\",\"\"],[\"Identifier\",\"voidSecond\",\"\"]]}",
+            "{\"line\":42,\"edges\":[[0,1],[1,2],[1,3],[2,4],[3,5],[3,6],[3,7],[5,8],[6,9],[7,10],[8,11],[8,12],[10,13],[10,14]],\"contents\":[[\"ExpressionStatement\",\"memcpy ( structCharVoid . charFirst , SRC_STR , sizeof ( structCharVoid ) ) ;\",\"\"],[\"CallExpression\",\"memcpy ( structCharVoid . charFirst , SRC_STR , sizeof ( structCharVoid ) )\",\"\"],[\"Callee\",\"memcpy\",\"\"],[\"ArgumentList\",\"structCharVoid . charFirst , SRC_STR , sizeof ( structCharVoid )\",\"\"],[\"Identifier\",\"memcpy\",\"\"],[\"Argument\",\"structCharVoid . charFirst\",\"\"],[\"Argument\",\"SRC_STR\",\"\"],[\"Argument\",\"sizeof ( structCharVoid )\",\"\"],[\"MemberAccess\",\"structCharVoid . charFirst\",\"\"],[\"Identifier\",\"SRC_STR\",\"\"],[\"SizeofExpr\",\"sizeof ( structCharVoid )\",\"\"],[\"Identifier\",\"structCharVoid\",\"\"],[\"Identifier\",\"charFirst\",\"\"],[\"Sizeof\",\"sizeof\",\"\"],[\"Identifier\",\"structCharVoid\",\"\"]]}",
+            "{\"line\":43,\"edges\":[[0,1],[1,2],[1,3],[2,4],[2,5],[4,6],[4,7],[5,8],[5,9],[8,10],[8,11],[10,12],[10,13],[11,14],[11,15],[13,16],[13,17]],\"contents\":[[\"ExpressionStatement\",\"structCharVoid . charFirst [ ( sizeof ( structCharVoid . charFirst ) / sizeof ( char ) ) - 1 ] = '\\\\0' ;\",\"\"],[\"AssignmentExpr\",\"structCharVoid . charFirst [ ( sizeof ( structCharVoid . charFirst ) / sizeof ( char ) ) - 1 ] = '\\\\0'\",\"=\"],[\"ArrayIndexing\",\"structCharVoid . charFirst [ ( sizeof ( structCharVoid . charFirst ) / sizeof ( char ) ) - 1 ]\",\"\"],[\"CharExpression\",\"'\\\\0'\",\"\"],[\"MemberAccess\",\"structCharVoid . charFirst\",\"\"],[\"AdditiveExpression\",\"( sizeof ( structCharVoid . charFirst ) / sizeof ( char ) ) - 1\",\"-\"],[\"Identifier\",\"structCharVoid\",\"\"],[\"Identifier\",\"charFirst\",\"\"],[\"MultiplicativeExpression\",\"sizeof ( structCharVoid . charFirst ) / sizeof ( char )\",\"/\"],[\"IntegerExpression\",\"1\",\"\"],[\"SizeofExpr\",\"sizeof ( structCharVoid . charFirst )\",\"\"],[\"SizeofExpr\",\"sizeof ( char )\",\"\"],[\"Sizeof\",\"sizeof\",\"\"],[\"MemberAccess\",\"structCharVoid . charFirst\",\"\"],[\"Sizeof\",\"sizeof\",\"\"],[\"SizeofOperand\",\"char\",\"\"],[\"Identifier\",\"structCharVoid\",\"\"],[\"Identifier\",\"charFirst\",\"\"]]}",
+            "{\"line\":44,\"edges\":[[0,1],[1,2],[1,3],[2,4],[3,5],[5,6],[6,7],[6,8],[8,9],[8,10]],\"contents\":[[\"ExpressionStatement\",\"printLine ( ( char * ) structCharVoid . charFirst ) ;\",\"\"],[\"CallExpression\",\"printLine ( ( char * ) structCharVoid . charFirst )\",\"\"],[\"Callee\",\"printLine\",\"\"],[\"ArgumentList\",\"( char * ) structCharVoid . charFirst\",\"\"],[\"Identifier\",\"printLine\",\"\"],[\"Argument\",\"( char * ) structCharVoid . charFirst\",\"\"],[\"CastExpression\",\"( char * ) structCharVoid . charFirst\",\"\"],[\"CastTarget\",\"char *\",\"\"],[\"MemberAccess\",\"structCharVoid . charFirst\",\"\"],[\"Identifier\",\"structCharVoid\",\"\"],[\"Identifier\",\"charFirst\",\"\"]]}",
+            "{\"line\":45,\"edges\":[[0,1],[1,2],[1,3],[2,4],[3,5],[5,6],[6,7],[6,8],[8,9],[8,10]],\"contents\":[[\"ExpressionStatement\",\"printLine ( ( char * ) structCharVoid . voidSecond ) ;\",\"\"],[\"CallExpression\",\"printLine ( ( char * ) structCharVoid . voidSecond )\",\"\"],[\"Callee\",\"printLine\",\"\"],[\"ArgumentList\",\"( char * ) structCharVoid . voidSecond\",\"\"],[\"Identifier\",\"printLine\",\"\"],[\"Argument\",\"( char * ) structCharVoid . voidSecond\",\"\"],[\"CastExpression\",\"( char * ) structCharVoid . voidSecond\",\"\"],[\"CastTarget\",\"char *\",\"\"],[\"MemberAccess\",\"structCharVoid . voidSecond\",\"\"],[\"Identifier\",\"structCharVoid\",\"\"],[\"Identifier\",\"voidSecond\",\"\"]]}"
+        ]
+
+        import json
+        json_nodes: List[dict] = [json.loads(n) for n in nodes]
+        stmts: List[ASTNode] = [json2astNode(n) for n in json_nodes]
+        var_Lists: List[List[str]] = generate_feature3(stmts)
+        return var_Lists
+
+    def test_gen_all_feature():
+        import sys
+        pretrain_model = Word2Vec.load(sys.argv[1])
+        ivdetect_util = IVDetectUtil(pretrain_model, "cuda")
+        feature1, feature2, feature3, feature4, feature5, edge_index, label = ivdetect_util.generate_all_features(sample1)
+        print()
+
+    test_gen_all_feature()
+
 
 

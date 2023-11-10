@@ -65,7 +65,7 @@ class IVDetectModel(nn.Module):
 
 
     def vectorize_graph(self, data: Tuple[List[torch.Tensor], List[Tuple], List[torch.Tensor],
-                                          List[torch.Tensor], List[torch.Tensor], torch.LongTensor, int]) -> Data:
+                                          List[torch.Tensor], List[torch.Tensor], torch.LongTensor, int], device) -> Data:
         # vectorizing every node first
         feature_1, feature_2, feature_3, feature_4, feature_5, edge_index, label = data
         # process feature_1
@@ -84,7 +84,7 @@ class IVDetectModel(nn.Module):
             h, c = self.tree_lstm(features.float(), node_order, edges, edge_order)
             # add embedding of root node
             feature_2_vec.append(h[0])
-        feature_2_vec = torch.stack(feature_2_vec).to(model_args.device)
+        feature_2_vec = torch.stack(feature_2_vec).to(device)
 
         feature_3 = pack_sequence(feature_3, enforce_sorted=False)
         feature_3, _ = self.gru_2(feature_3.float())
