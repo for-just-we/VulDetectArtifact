@@ -20,5 +20,18 @@ The line info is like, each element denotes a file with corresponding vulnerable
 }
 ```
 
+# 2.Parsing Source files
 
+Our main pipeline for extract code graphs is done by [Joern](https://github.com/joernio/joern).
+specifically, we use old version of [Joern](https://github.com/octopus-platform/joern) because we find the new version is too hard to use, the old version will dump csv files, so our preprocess is mainly parsing the csv files.
 
+Also, we recently notice another tool [cpg](https://github.com/Fraunhofer-AISEC/cpg), we found it much easier to use than Joern. 
+It is based on eclipse CDT to parse, produce less syntax error than old version of Joern.
+It can also produce inter-procedural data-flow graph in a single file.
+We will provide another pipeline driven by cpg.
+
+For SVF dumped cpg, we follow [DeepWuKong](https://github.com/jumormt/DeepWukong) by directly [download](https://bupteducn-my.sharepoint.com/:u:/g/personal/jackiecheng_bupt_edu_cn/EalnVAYC8zZDgwhPmGJ034cBYNZ8zB7-mNSNm-a7oYXkcw?e=eRUc50) their xfg.
+
+Steps:
+
+1.For source codes in a directory, for example `xxx/cwe125-source-code`, run `joern-parse outputDirectory xxx/cwe125-source-code` to get the csv files.
