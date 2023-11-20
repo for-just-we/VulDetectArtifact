@@ -1,7 +1,8 @@
 import csv
+import json
 import sys
 import os
-from typing import Dict, List, Tuple
+from typing import Dict, List, Union
 
 NODE_FILE = "nodes.csv"
 EDGE_FILE = "edges.csv"
@@ -31,7 +32,7 @@ CFG_ENTRY = "CFGEntryNode"
         ["IdentifierDeclType","charVoid"],
         ["Identifier","structCharVoid"]
     ]
-}",
+}
 '''
 class CFGNode:
     def __init__(self, line: int):
@@ -42,6 +43,13 @@ class CFGNode:
 
     def ast_node_size(self):
         return len(self.ast_nodes)
+
+    def to_json(self):
+        return {
+            "line": self.line,
+            "edges": self.ast_edges,
+            "contents": self.ast_nodes
+        }
 
 '''
 每一个graph dump为json后为: 
@@ -78,6 +86,17 @@ class FunctionGraph:
 
     def node_size(self):
         return len(self.cfg_nodes)
+
+    def to_json(self):
+        edge_set_to_json = lambda edge_set: [json.dumps(edge) for edge in edge_set]
+        return {
+            "fileName": self.file_name,
+            "functionName": self.func_name,
+            "nodes": [json.dumps(node.to_json()) for node in self.cfg_nodes],
+            "cfgEdges": edge_set_to_json(self.cfg_edges),
+            "cdgEdges": edge_set_to_json(self.cdg_edges),
+            "ddgEdges": edge_set_to_json(self.ddg_edges)
+        }
 
 class CSVAnalyzer:
     def __init__(self, path):
@@ -186,10 +205,12 @@ class CSVAnalyzer:
         process("ddg")
 
 
-def recurse_folder(folder_path):
+def recurse_folder(folder_path, output_file):
+    json_graphs: List[Dict[str, Union[str, List[str]]]] = list()
     for root, dirs, files in os.walk(folder_path):
         if len(dirs) == 0 and NODE_FILE in files and EDGE_FILE in files:
             cur_path = root[len(folder_path) + 1:]
+            unify_path = '/'.join(cur_path.split(os.sep))
             tmp = cur_path.split(os.sep)
             testcase_name = tmp[0]
             testcase_path = '/'.join(tmp[2:])
@@ -199,11 +220,16 @@ def recurse_folder(folder_path):
             csv_analyzer.analyze_edges_files()
             csv_analyzer.analyze_nodes_files()
             csv_analyzer.add_cfg_node_edges()
+            for graph_data in csv_analyzer.func_graphs:
+                func_graph: Dict[str, Union[str, List[str]]] = graph_data.to_json()
+                func_graph["testcase-path"] = unify_path
+                json_graphs.append(func_graph)
             print("======================")
-
+    json.dump(json_graphs, open(output_file, 'w', encoding='utf8'), indent=2)
 
 
 
 if __name__ == '__main__':
     csv_dir = sys.argv[1]
-    recurse_folder(csv_dir)
+    output_file = sys.argv[2]
+    recurse_folder(csv_dir, output_file)
