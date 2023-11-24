@@ -9,7 +9,7 @@ from typing import Dict, List, Tuple
 from graph.detectors.models.reveal import type_map, model_args, ClassifyModel
 
 class RevealUtil(object):
-    def __init__(self, pretrain_model: Word2Vec, reveal_model: ClassifyModel, device):
+    def __init__(self, pretrain_model: Word2Vec, reveal_model: ClassifyModel, device: str):
         self.pretrain_model = pretrain_model
         self.reveal_model = reveal_model
         self.arrays = np.eye(80)

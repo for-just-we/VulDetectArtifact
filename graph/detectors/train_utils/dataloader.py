@@ -11,7 +11,7 @@ class TrainParser(Tap):
 train_args = TrainParser().parse_args(known_only=True)
 
 # 传入的每个sample应为Tuple[int, List[Data], torch.LongTensor]
-def get_dataloader(positive_samples, negative_samples, batch_size: int):
+def get_dataloader(positive_samples: list, negative_samples: list, batch_size: int):
     all_samples = positive_samples + negative_samples
     random.shuffle(all_samples)
 
