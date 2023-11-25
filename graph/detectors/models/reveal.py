@@ -39,7 +39,7 @@ from graph.detectors.models.common_model import GlobalAddPool
 
 # Reveal分类模型
 class ClassifyModel(nn.Module):
-    def __init__(self, num_layers=1, MLP_hidden_dim=256, need_node_emb=False):
+    def __init__(self, num_layers=1, MLP_hidden_dim=model_args.hidden_size, need_node_emb=False):
         super().__init__()
         MLP_internal_dim = int(MLP_hidden_dim / 2)
         input_dim = len(type_map) + model_args.vector_size

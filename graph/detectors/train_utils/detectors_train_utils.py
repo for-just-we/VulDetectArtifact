@@ -17,9 +17,9 @@ from graph.detectors.train_utils.base_train_util import BaseTrainUtil
 
 
 class RevealTrainUtil(BaseTrainUtil):
-    def __init__(self, w2v_model: Word2Vec, gnnNets: ClassifyModel, device: str, dataset_dir: str, train_args):
-        super().__init__(w2v_model, gnnNets, device, dataset_dir, train_args)
-        self.reveal_util: RevealUtil = RevealUtil(w2v_model, gnnNets, device)
+    def __init__(self, w2v_model: Word2Vec, gnnNets: ClassifyModel, train_args):
+        super().__init__(w2v_model, gnnNets, train_args)
+        self.reveal_util: RevealUtil = RevealUtil(w2v_model, gnnNets, train_args.device)
 
     def generate_features(self, sample: Dict[str, Union[str, List[int], List[str]]]) \
             -> Tuple[int, List[Data], torch.LongTensor]:
@@ -31,9 +31,9 @@ class RevealTrainUtil(BaseTrainUtil):
 
 
 class IVDetectTrainUtil(BaseTrainUtil):
-    def __init__(self, w2v_model: Word2Vec, gnnNets: IVDetectModel, device: str, dataset_dir: str, train_args):
-        super().__init__(w2v_model, gnnNets, device, dataset_dir, train_args)
-        self.ivdetect_util: IVDetectUtil = IVDetectUtil(w2v_model, device)
+    def __init__(self, w2v_model: Word2Vec, gnnNets: IVDetectModel, train_args):
+        super().__init__(w2v_model, gnnNets, train_args)
+        self.ivdetect_util: IVDetectUtil = IVDetectUtil(w2v_model, train_args.device)
 
     def generate_features(self, sample: Dict[str, Union[str, List[int], List[str]]]) \
             -> Tuple[List[torch.Tensor], List[Tuple], List[torch.Tensor], List[torch.Tensor], List[torch.Tensor], torch.LongTensor, int]:
@@ -46,9 +46,9 @@ class IVDetectTrainUtil(BaseTrainUtil):
 
 
 class DevignTrainUtil(BaseTrainUtil):
-    def __init__(self, w2v_model: Word2Vec, gnnNets: DevignModel, device: str, dataset_dir: str, train_args):
-        super().__init__(w2v_model, gnnNets, device, dataset_dir, train_args)
-        self.devign_util: DevignUtil = DevignUtil(w2v_model, gnnNets, device)
+    def __init__(self, w2v_model: Word2Vec, gnnNets: DevignModel, train_args):
+        super().__init__(w2v_model, gnnNets, train_args)
+        self.devign_util: DevignUtil = DevignUtil(w2v_model, gnnNets, train_args.device)
 
     def generate_features(self, sample: Dict[str, Union[str, List[int], List[str]]]) \
             -> Tuple[int, List[Data], torch.LongTensor]:
@@ -60,8 +60,8 @@ class DevignTrainUtil(BaseTrainUtil):
 
 
 class DeepWuKongTrainUtil(BaseTrainUtil):
-    def __init__(self, w2v_model: Word2Vec, gnnNets: DeepWuKongModel, device: str, dataset_dir: str, train_args):
-        super().__init__(w2v_model, gnnNets, device, dataset_dir, train_args)
+    def __init__(self, w2v_model: Word2Vec, gnnNets: DeepWuKongModel, train_args):
+        super().__init__(w2v_model, gnnNets, train_args)
 
     def generate_features(self, data: Dict) -> Data:
         return vectorize_xfg(self.w2v_model, data, self.device)

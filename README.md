@@ -1,16 +1,16 @@
 # VulDetectArtifact
- Artifact for TOSEM. (Note: we are still organizing our code. We are gradually releasing code. ) 
+ Artifact for TOSEM. (Note: we are still organizing our code into a single pipeline. Remaining codes is gradually being released.) 
 
 
-# Datasets
+# 1.Datasets
 
 For SARD dataset we have uploaded to [zenodo](https://zenodo.org/records/10088191), for Fan dataset, the related information is at [MSR_20_Code_vulnerability_CSV_Dataset](https://github.com/ZeoVan/MSR_20_Code_vulnerability_CSV_Dataset), the dataset csv can be downloaded from [google driver](https://drive.google.com/file/d/1-0VhnHBp9IGh90s2wCNjeCMuy70HPl8X/view?usp=sharing). We extract `func_before` and `func_after` from it.
 
-# Preprocess Pipeline
+# 2.Preprocess Pipeline
 
 For preprocess code into graph, please refer to [preprocess/ReadMe.md](preprocess/ReadMe.md)
 
-# Pretrain embedding model
+# 3.Pretrain embedding model
 
 Run `python pretrain.py detector_name path2train_datas embedding_model_path`
 
@@ -20,4 +20,18 @@ Run `python pretrain.py detector_name path2train_datas embedding_model_path`
 
 - `embedding_model_path`: The path to the saved embedding model.
 
-# Detection Pipeline
+# 4.Detection Pipeline
+
+Run `python detection.py <args>` to train detectors. `<args>` includes:
+
+- `--detector <detector_name>`, `<detector_name>` could be one of `["deepwukong", "reveal", "ivdetect", "devign", "tokenlstm", "vuldeepecker", "sysevr"]`
+
+- `--w2v_model_path <model_path>`, `<model_path>` could be relative or absolute path of pretrained word2vec model.
+
+- `--dataset_dir <dataset_dir>`, `<dataset_dir>` is path to the dir storing json datas. It should include `train_vul.json`, `train_normal.json`, `eval_vul.json`, `eval_normal.json`, `test_vul.json`, `test_normal.json`.
+
+- `--model_dir <model_dir>`, `<model_dir>` is where the model pth file placed, it's corresponding directory. The scripts will automatically load the best model in the dir.
+
+- `--train`, means will train model. If there exist a model in `<model_dir>`, the script will first load that model and then train.
+
+- `--test`, means will test the model. There must be a model in `<model_dir>` first.

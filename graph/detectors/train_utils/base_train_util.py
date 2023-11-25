@@ -16,22 +16,23 @@ from torch.optim import Adam
 import sys
 
 class BaseTrainUtil:
-    def __init__(self, w2v_model: Word2Vec, gnnNets, device: str, dataset_dir: str, train_args):
+    def __init__(self, w2v_model: Word2Vec, gnnNets, train_args):
         self.w2v_model: Word2Vec = w2v_model
         self.gnnNets = gnnNets
-        self.device = device
+        self.device = train_args.device
+        self.gnnNets.to(self.device)
 
-        self.train_positive: List[Dict] = json.load(open(os.path.join(dataset_dir, "function/train_vuls.json"),
+        self.train_positive: List[Dict] = json.load(open(os.path.join(train_args.dataset_dir, "function/train_vul.json"),
                                                            'r', encoding='utf-8'))
-        self.train_negative: List[Dict] = json.load(open(os.path.join(dataset_dir, "function/train_nors.json"),
+        self.train_negative: List[Dict] = json.load(open(os.path.join(train_args.dataset_dir, "function/train_nor.json"),
                                                            'r', encoding='utf-8'))
-        self.val_positive: List[Dict] = json.load(open(os.path.join(dataset_dir, "function/val_vuls.json"),
+        self.val_positive: List[Dict] = json.load(open(os.path.join(train_args.dataset_dir, "function/val_vul.json"),
                                                          'r', encoding='utf-8'))
-        self.val_negative: List[Dict] = json.load(open(os.path.join(dataset_dir, "function/val_nors.json"),
+        self.val_negative: List[Dict] = json.load(open(os.path.join(train_args.dataset_dir, "function/val_nor.json"),
                                                          'r', encoding='utf-8'))
-        self.test_positive: List[Dict] = json.load(open(os.path.join(dataset_dir, "function/test_vuls.json"),
+        self.test_positive: List[Dict] = json.load(open(os.path.join(train_args.dataset_dir, "function/test_vul.json"),
                                                           'r', encoding='utf-8'))
-        self.test_negative: List[Dict] = json.load(open(os.path.join(dataset_dir, "function/test_nors.json"),
+        self.test_negative: List[Dict] = json.load(open(os.path.join(train_args.dataset_dir, "function/test_nor.json"),
                                                           'r', encoding='utf-8'))
 
         self.train_args = train_args
