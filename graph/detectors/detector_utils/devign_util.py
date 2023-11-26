@@ -14,14 +14,14 @@ class DevignUtil(object):
     def __init__(self, pretrain_model: Word2Vec, devign_model: DevignModel, device):
         self.pretrain_model = pretrain_model
         self.devign_model = devign_model
-        self.arrays = np.eye(80)
+        self.arrays = np.eye(len(type_map))
         self.device = device
 
     # 生成图中每个ASTNode的初始embedding，在训练阶段这个函数只执行一次
     # nodeContent[0] 为type, nodeContent[1] 为token sequence
     def generate_initial_astNode_embedding(self, nodeContent: List[str]) -> np.array:
         # type vector
-        n_c = self.arrays[type_map[nodeContent[0]]]
+        n_c = self.arrays[type_map[nodeContent[0]] - 1]
         # token sequence
         token_seq: List[str] = nodeContent[1].split(' ')
         n_v = np.array([self.pretrain_model[word] if word in self.pretrain_model.wv.vocab else

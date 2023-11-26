@@ -225,6 +225,10 @@ def recurse_folder(folder_path, output_file):
                 func_graph["testcase-path"] = unify_path
                 json_graphs.append(func_graph)
             print("======================")
+
+    # make sure there is not empty graph datas
+    is_not_empty_data = lambda data: len(data["nodes"]) > 0 and (len(data["cdgEdges"]) + len(data["ddgEdges"]) > 0)
+    json_graphs = list(filter(is_not_empty_data, json_graphs))
     json.dump(json_graphs, open(output_file, 'w', encoding='utf8'), indent=2)
 
 

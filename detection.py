@@ -1,6 +1,5 @@
 import torch
 from gensim.models.word2vec import Word2Vec
-from enum import Enum
 
 from graph.detectors.train_utils.detectors_train_utils import DevignTrainUtil, \
     RevealTrainUtil, IVDetectTrainUtil, DeepWuKongTrainUtil
@@ -12,25 +11,25 @@ from graph.detectors.models.ivdetect import IVDetectModel
 
 import argparse
 
-class DetectorNames(Enum):
-    dwk = "deepwukong",
-    reveal = "reveal",
-    ivdetect = "ivdetect",
-    devign = "devign",
-    tokenlstm = "tokenlstm",
-    vdp = "vuldeepecker",
-    sysevr = "sysevr"
+dwk: str = "deepwukong"
+reveal: str = "reveal"
+ivdetect: str = "ivdetect"
+devign: str = "devign"
+tokenlstm: str = "tokenlstm"
+vdp: str = "vuldeepecker"
+sysevr: str = "sysevr"
 
-graph_detector_train_utils = {DetectorNames.dwk.value: DeepWuKongTrainUtil,
-                              DetectorNames.reveal.value: RevealTrainUtil,
-                              DetectorNames.ivdetect.value: IVDetectTrainUtil,
-                              DetectorNames.devign.value: DevignTrainUtil}
-graph_detector_models = {DetectorNames.dwk.value: DeepWuKongModel,
-                              DetectorNames.reveal.value: ClassifyModel,
-                              DetectorNames.ivdetect.value: IVDetectModel,
-                              DetectorNames.devign.value: DevignModel}
+graph_detector_train_utils = {dwk: DeepWuKongTrainUtil,
+                              reveal: RevealTrainUtil,
+                              ivdetect: IVDetectTrainUtil,
+                              devign: DevignTrainUtil}
+graph_detector_models = {dwk: DeepWuKongModel,
+                              reveal: ClassifyModel,
+                              ivdetect: IVDetectModel,
+                              devign: DevignModel}
 
 sequence_detectors = ["tokenlstm", "vuldeepecker", "sysevr"]
+graph_detectors = [name for name in graph_detector_models.keys()]
 
 def build_arg_parser():
     parser = argparse.ArgumentParser(description="Command-line tool to detect vulnerable code fragments.")
@@ -40,15 +39,15 @@ def build_arg_parser():
     parser.add_argument("--device", type=str, help="specify device, cuda or cpu", default=default_device)
     parser.add_argument("--model_dir", type=str, required=True, help="specify where to store GNN or RNN models")
     parser.add_argument("--w2v_model_path", type=str, required=True, help="path to word2vec model")
-    parser.add_argument("--detector", type=str, required=True, help="the detector name here.", choices=list(graph_detector_models.keys()) + sequence_detectors)
+    parser.add_argument("--detector", type=str, required=True, help="the detector name here.", choices=graph_detectors + sequence_detectors)
     parser.add_argument("--batch_size", type=int, help="batch_size", default=64)
     parser.add_argument("--learning_rate", type=float, help="learning rate", default=0.0001)
     parser.add_argument("--weight_decay", type=float, help="weight decay", default=1.3e-6)
     parser.add_argument("--early_stopping", type=int, default=5)
     parser.add_argument("--max_epochs", type=int, default=100)
     parser.add_argument("--save_epoch", type=int, default=5)
-    parser.add_argument("--train", type=bool, action="store_true", default=False)
-    parser.add_argument("--test", type=bool, action="store_true", default=False)
+    parser.add_argument("--train", action="store_true", default=False)
+    parser.add_argument("--test", action="store_true", default=False)
 
     return parser
 

@@ -15,6 +15,14 @@ from torch_geometric.data import Batch, Data
 from torch.optim import Adam
 import sys
 
+def load_data(dataset_dir: str, file_name: str , label: int, is_empty_data = None):
+    datas = json.load(open(os.path.join(dataset_dir, file_name), 'r', encoding='utf-8'))
+    if is_empty_data:
+        datas = list(filter(is_empty_data, datas))
+    for data in datas:
+        data["target"] = label
+    return datas
+
 class BaseTrainUtil:
     def __init__(self, w2v_model: Word2Vec, gnnNets, train_args):
         self.w2v_model: Word2Vec = w2v_model
@@ -22,18 +30,14 @@ class BaseTrainUtil:
         self.device = train_args.device
         self.gnnNets.to(self.device)
 
-        self.train_positive: List[Dict] = json.load(open(os.path.join(train_args.dataset_dir, "function/train_vul.json"),
-                                                           'r', encoding='utf-8'))
-        self.train_negative: List[Dict] = json.load(open(os.path.join(train_args.dataset_dir, "function/train_nor.json"),
-                                                           'r', encoding='utf-8'))
-        self.val_positive: List[Dict] = json.load(open(os.path.join(train_args.dataset_dir, "function/val_vul.json"),
-                                                         'r', encoding='utf-8'))
-        self.val_negative: List[Dict] = json.load(open(os.path.join(train_args.dataset_dir, "function/val_nor.json"),
-                                                         'r', encoding='utf-8'))
-        self.test_positive: List[Dict] = json.load(open(os.path.join(train_args.dataset_dir, "function/test_vul.json"),
-                                                          'r', encoding='utf-8'))
-        self.test_negative: List[Dict] = json.load(open(os.path.join(train_args.dataset_dir, "function/test_nor.json"),
-                                                          'r', encoding='utf-8'))
+        is_not_empty_data = lambda data: len(data["nodes"]) > 0 and (len(data["cdgEdges"]) + len(data["ddgEdges"]) > 0)
+
+        self.train_positive: List[Dict] = load_data(train_args.dataset_dir, "train_vul.json", 1, is_not_empty_data)
+        self.train_negative: List[Dict] = load_data(train_args.dataset_dir, "train_normal.json", 0, is_not_empty_data)
+        self.val_positive: List[Dict] = load_data(train_args.dataset_dir, "eval_vul.json", 1, is_not_empty_data)
+        self.val_negative: List[Dict] = load_data(train_args.dataset_dir, "eval_normal.json", 0, is_not_empty_data)
+        self.test_positive: List[Dict] = load_data(train_args.dataset_dir, "test_vul.json", 1, is_not_empty_data)
+        self.test_negative: List[Dict] = load_data(train_args.dataset_dir, "test_normal.json", 0, is_not_empty_data)
 
         self.train_args = train_args
 
