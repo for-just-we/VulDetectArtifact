@@ -35,3 +35,7 @@ Run `python detection.py <args>` to train detectors. `<args>` includes:
 - `--train`, means will train model. If there exist a model in `<model_dir>`, the script will first load that model and then train.
 
 - `--test`, means will test the model. There must be a model in `<model_dir>` first.
+
+# 5.Explanation Pipeline
+
+Run `explain.py`.

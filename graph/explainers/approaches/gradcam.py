@@ -3,10 +3,9 @@ from torch import Tensor
 import torch.nn as nn
 import torch.nn.functional as F
 
-from torch_geometric.utils.loop import add_self_loops
 from typing import Any, Callable, List, Tuple, Union
 
-from graph.explainers.common import WalkBase
+from graph.explainers.approaches.common import WalkBase
 
 
 import captum.attr as ca

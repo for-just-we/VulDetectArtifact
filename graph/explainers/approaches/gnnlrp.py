@@ -5,7 +5,7 @@ from torch import Tensor
 import torch.nn as nn
 from torch_geometric.utils.loop import add_self_loops
 
-from graph.explainers.common import WalkBase
+from graph.explainers.approaches.common import WalkBase
 
 
 class GraphSequential(nn.Sequential):

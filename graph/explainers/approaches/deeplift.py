@@ -2,8 +2,8 @@ import torch
 from torch import Tensor
 import torch.nn as nn
 
-from graph.explainers.explain_util import DeepLiftUtil
-from graph.explainers.common import WalkBase
+from graph.explainers.approaches.explain_util import DeepLiftUtil
+from graph.explainers.approaches.common import WalkBase
 
 EPS = 1e-15
 

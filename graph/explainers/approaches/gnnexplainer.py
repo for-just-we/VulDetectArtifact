@@ -1,13 +1,10 @@
 from tap import Tap
 import torch
 from torch import Tensor
-import torch.nn as nn
-from torch_geometric.nn import MessagePassing
-from math import sqrt
 
 from torch_geometric.data import Batch, Data
 from torch.nn.functional import cross_entropy
-from graph.explainers.common import ExplainerBase
+from graph.explainers.approaches.common import ExplainerBase
 
 class XParser(Tap):
     vis: bool = False
