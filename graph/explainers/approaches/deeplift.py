@@ -48,5 +48,5 @@ class DeepLIFT(WalkBase):
 
     def explain(self, x, edge_index):
         mask = self.forward(x, edge_index)
-        sorted_results = mask.sort(descending=True)
+        sorted_results = mask.sort(descending=True).indices.cpu()
         return sorted_results, True

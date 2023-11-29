@@ -57,12 +57,14 @@ def main():
     # 训练graph detectors
     if args.detector in graph_detector_models.keys():
         model_cls = graph_detector_models[args.detector]
-        model = model_cls()
+        need_node_emb_flag = (args.explainer == "pgexplainer")
+        model = model_cls(need_node_emb=need_node_emb_flag)
         model_path = os.path.join(args.model_dir, f"{args.detector}_best.pth")
         checkpoint = torch.load(model_path)
         model.load_state_dict(checkpoint['net'])
+        model.to(args.device)
         explainer_name = args.explainer
-        explainer_util_cls =  graph_detector_explain_utils[explainer_name]
+        explainer_util_cls = graph_detector_explain_utils[args.detector]
         explainer_util: BaseExplainerUtil = explainer_util_cls(w2v_model, model, args, explainer_name, args.k)
         explainer_util.test()
 

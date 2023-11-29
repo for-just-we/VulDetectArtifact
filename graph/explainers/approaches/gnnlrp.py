@@ -170,5 +170,5 @@ class GNN_LRP(WalkBase):
         return mask.detach(), False
 
     def explain(self, x, edge_index):
-        edge_mask = self.forward(x, edge_index)
-        sorted_indices = edge_mask.sort(descending=True)
+        edge_mask, _ = self.forward(x, edge_index)
+        sorted_indices = edge_mask.sort(descending=True).indices.cpu()

@@ -29,9 +29,9 @@ def normalize(x: torch.Tensor):
     return x
 
 class GradCAM(WalkBase):
-    def __init__(self, model, layer, epochs=100, lr=0.01, explain_graph=False, molecule=False, device="cpu"):
+    def __init__(self, model, epochs=100, lr=0.01, explain_graph=False, molecule=False, device="cpu"):
         super().__init__(model, epochs, lr, explain_graph, molecule, device)
-        self.layer = layer
+        self.layer = model.key_layer
 
     def forward(self, x: Tensor, edge_index: Tensor, **kwargs):
         """
@@ -65,7 +65,7 @@ class GradCAM(WalkBase):
 
     def explain(self, x, edge_index):
         mask = self.forward(x, edge_index)
-        sorted_results = mask.sort(descending=True)
+        sorted_results = mask.sort(descending=True).indices.cpu()
         return sorted_results, True
 
 

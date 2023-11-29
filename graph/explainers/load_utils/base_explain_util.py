@@ -89,8 +89,12 @@ class BaseExplainerUtil:
 
         with torch.no_grad():
             for sample in tqdm(self.test_positive, desc="evaluating explainers", file=sys.stdout):
-                graph_data: Data = self.generate_graph_data(sample)
-                prob, node_emb = self.gnnNets(Batch.from_data_list([graph_data]).to(self.device))
+                graph_data: Data = self.generate_graph_data(sample).to(self.device)
+                res = self.gnnNets(data=Batch.from_data_list([graph_data]).to(self.device))
+                if isinstance(res, tuple):
+                    prob = res[0]
+                else:
+                    prob = res
                 _, prediction = torch.max(prob, -1)
                 # 必须是true positive
                 if prediction.cpu() == 0:
