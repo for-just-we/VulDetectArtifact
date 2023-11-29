@@ -38,10 +38,15 @@ class DeepLIFT(WalkBase):
         # mask = self.control_sparsity(mask, kwargs.get('sparsity'))
         # Store related predictions for further evaluation.
         shap._remove_hooks()
-        sorted_results = mask.sort(descending=True)
+        # sorted_results = mask.sort(descending=True)
 
         # with torch.no_grad():
         #     with self.connect_mask(self):
         #         related_preds = self.eval_related_pred(x, edge_index, masks, **kwargs)
 
-        return mask.detach(), sorted_results.indices.cpu(), edge_index.cpu()
+        return mask.detach()
+
+    def explain(self, x, edge_index):
+        mask = self.forward(x, edge_index)
+        sorted_results = mask.sort(descending=True)
+        return sorted_results, True

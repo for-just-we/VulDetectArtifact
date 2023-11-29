@@ -38,4 +38,14 @@ Run `python detection.py <args>` to train detectors. `<args>` includes:
 
 # 5.Explanation Pipeline
 
-Run `explain.py`.
+Run `python explain.py <args>`. `<args> includes`:
+
+- `--detector <detector_name>`, `<detector_name>` could be one of `["deepwukong", "reveal", "ivdetect", "devign", "tokenlstm", "vuldeepecker", "sysevr"]`
+
+- `--w2v_model_path <model_path>`, `<model_path>` could be relative or absolute path of pretrained word2vec model.
+
+- `--dataset_dir <dataset_dir>`, `<dataset_dir>` is path to the dir storing json datas. It should include `test_vul.json`.
+
+- `--model_dir <model_dir>`, `<model_dir>` is where the model pth file placed, it's corresponding directory. The scripts will automatically load the best model in the dir.
+
+- `--explainer <explainer_name>`, `<explainer_name>` could be one of `["gnnexplainer", "pgexplainer", "gnnlrp", "gradcam", "deeplift"]` for now. We are organizing the code in sequence-based explainers into this pipeline.

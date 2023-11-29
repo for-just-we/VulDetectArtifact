@@ -51,7 +51,7 @@ def inv_sigmoid(t: torch.Tensor):
 
 
 class PGExplainer(nn.Module):
-    def __init__(self, model, hidden_size, epochs: int = explainer_args.training_epochs, lr: float = explainer_args.lr,
+    def __init__(self, model, epochs: int = explainer_args.training_epochs, lr: float = explainer_args.lr,
                  num_hops: Optional[int] = None, device = "cpu"):
         # lr=0.005, 0.003
         super(PGExplainer, self).__init__()
@@ -68,7 +68,7 @@ class PGExplainer(nn.Module):
         self.t1 = explainer_args.t1
 
         self.elayers = nn.ModuleList()
-        input_feature = hidden_size * 2  # 2
+        input_feature = self.model.input_size * 2  # 2
         # 总共2层全连接网络
         self.elayers.append(nn.Sequential(nn.Linear(input_feature, 64), nn.ReLU()))
         self.elayers.append(nn.Linear(64, 1))
@@ -280,13 +280,14 @@ class PGExplainer(nn.Module):
         print(f"training time is {duration:.5}s")
 
 
-    def explain_edge_mask(self, x, edge_index, **kwargs):
+    def explain(self, x, edge_index, **kwargs):
         data = Batch.from_data_list([Data(x=x, edge_index=edge_index)])
         data = data.to(self.device)
         with torch.no_grad():
             prob, emb = self.get_model_output(data.x, data.edge_index)
             _, edge_mask = self.forward((data.x, emb, data.edge_index, 1.0), training=False)
-        return edge_mask  # [num_node, num_node]
+            sorted_indices = edge_mask.sort(descending=True)
+        return sorted_indices, False  # [num_node, num_node]
 
 
     def set_cpg(self, cpgs: list):

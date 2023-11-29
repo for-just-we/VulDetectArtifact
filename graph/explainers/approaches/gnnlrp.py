@@ -166,6 +166,9 @@ class GNN_LRP(WalkBase):
                 edge_attr = self.explain_edges_with_loop(x, walks, ex_label)
                 mask = edge_attr
                 # mask = self.control_sparsity(mask, kwargs.get('sparsity'))
-                sorted_results = mask.sort(descending=True)
 
-        return mask.detach(), sorted_results.indices.cpu(), edge_index_with_loop.cpu()
+        return mask.detach(), False
+
+    def explain(self, x, edge_index):
+        edge_mask = self.forward(x, edge_index)
+        sorted_indices = edge_mask.sort(descending=True)

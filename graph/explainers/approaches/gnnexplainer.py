@@ -139,7 +139,12 @@ class GNNExplainer(ExplainerBase):
         #     related_preds = self.eval_related_pred(x, edge_index, edge_masks, **kwargs)
         self.__clear_masks__()
         sorted_results = edge_mask.sort(descending=True)
-        return edge_mask.detach(), sorted_results.indices.cpu(), edge_index.cpu()
+        return edge_mask.detach()
+
+    def explain(self, x, edge_index):
+        edge_mask = self.forward(x, edge_index)
+        sorted_indices = edge_mask.sort(descending=True)
+        return sorted_indices, False
 
 
     def __repr__(self):

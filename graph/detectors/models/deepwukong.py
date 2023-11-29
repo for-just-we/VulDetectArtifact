@@ -26,6 +26,7 @@ class DeepWuKongModel(nn.Module):
         super(DeepWuKongModel, self).__init__()
         self.need_node_emb = need_node_emb
         self.hidden_dim = model_args.hidden_size
+        self.input_size = model_args.vector_size
         cons = [GCNConv(model_args.vector_size, self.hidden_dim)]
         cons.extend([
                 GCNConv(self.hidden_dim, self.hidden_dim)
@@ -47,6 +48,11 @@ class DeepWuKongModel(nn.Module):
 
         self.final_layer = nn.Linear(self.hidden_dim, model_args.num_classes)
         self.dropout = nn.Dropout()
+
+    @property
+    def key_layer(self):
+        return self.convs[-1]
+
 
     # def generateGraphData(self, sequenceData: List[torch.FloatTensor], edge_index: torch.LongTensor, y: int) -> Data:
     #     '''

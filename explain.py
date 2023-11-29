@@ -1,20 +1,18 @@
 import torch
 from gensim.models.word2vec import Word2Vec
 import argparse
+import os
 
-from graph.detectors.train_utils.detectors_train_utils import DevignTrainUtil, \
-    RevealTrainUtil, IVDetectTrainUtil, DeepWuKongTrainUtil
-from graph.detectors.train_utils.base_train_util import BaseTrainUtil
 from graph.detectors.models.deepwukong import DeepWuKongModel
 from graph.detectors.models.devign import DevignModel
 from graph.detectors.models.reveal import ClassifyModel
 from graph.detectors.models.ivdetect import IVDetectModel
 
-from graph.explainers.approaches.pgexplainer import PGExplainer
-from graph.explainers.approaches.gnnexplainer import GNNExplainer
-from graph.explainers.approaches.gradcam import GradCAM
-from graph.explainers.approaches.deeplift import DeepLIFT
-from graph.explainers.approaches.gnnlrp import GNN_LRP
+from graph.explainers.load_utils.detector_explain_utils import RevealExplainerUtil, \
+    IVDetectExplainerUtil, DevignExplainerUtil, DeepWuKongExplainerUtil
+from graph.explainers.load_utils.base_explain_util import BaseExplainerUtil
+
+
 
 dwk: str = "deepwukong"
 reveal: str = "reveal"
@@ -24,10 +22,10 @@ tokenlstm: str = "tokenlstm"
 vdp: str = "vuldeepecker"
 sysevr: str = "sysevr"
 
-graph_detector_train_utils = {dwk: DeepWuKongTrainUtil,
-                              reveal: RevealTrainUtil,
-                              ivdetect: IVDetectTrainUtil,
-                              devign: DevignTrainUtil}
+graph_detector_explain_utils = {dwk: DeepWuKongExplainerUtil,
+                              reveal: RevealExplainerUtil,
+                              ivdetect: IVDetectExplainerUtil,
+                              devign: DevignExplainerUtil}
 graph_detector_models = {dwk: DeepWuKongModel,
                               reveal: ClassifyModel,
                               ivdetect: IVDetectModel,
@@ -35,6 +33,7 @@ graph_detector_models = {dwk: DeepWuKongModel,
 
 sequence_detectors = ["tokenlstm", "vuldeepecker", "sysevr"]
 graph_detectors = [name for name in graph_detector_models.keys()]
+
 
 
 def build_arg_parser():
@@ -47,6 +46,8 @@ def build_arg_parser():
     parser.add_argument("--w2v_model_path", type=str, required=True, help="path to word2vec model")
     parser.add_argument("--detector", type=str, required=True, help="the detector name here.", choices=graph_detectors + sequence_detectors)
 
+    parser.add_argument("--explainer", type=str, required=True, choices={"gnnexplainer", "pgexplainer", "gradcam", "deeplift", "gnnlrp"})
+    parser.add_argument("--k", type=int, default=5, help="max_node num in explanation results")
     return parser
 
 def main():
@@ -57,6 +58,14 @@ def main():
     if args.detector in graph_detector_models.keys():
         model_cls = graph_detector_models[args.detector]
         model = model_cls()
+        model_path = os.path.join(args.model_dir, f"{args.detector}_best.pth")
+        checkpoint = torch.load(model_path)
+        model.load_state_dict(checkpoint['net'])
+        explainer_name = args.explainer
+        explainer_util_cls =  graph_detector_explain_utils[explainer_name]
+        explainer_util: BaseExplainerUtil = explainer_util_cls(w2v_model, model, args, explainer_name, args.k)
+        explainer_util.test()
+
 
 if __name__ == '__main__':
     main()

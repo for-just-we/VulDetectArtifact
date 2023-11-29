@@ -23,6 +23,7 @@ class ClassifyModel(nn.Module):
         super().__init__()
         MLP_internal_dim = int(MLP_hidden_dim / 2)
         input_dim = len(type_map) + model_args.vector_size
+        self.input_size = input_dim
         self.hidden_dim = input_dim
         # GGNN层
         self.GGNN = GatedGraphConv(out_channels=input_dim, num_layers=5)
@@ -48,6 +49,10 @@ class ClassifyModel(nn.Module):
         self.classifier = nn.Sequential(
             nn.Linear(in_features=MLP_hidden_dim, out_features=2),
         )
+
+    @property
+    def key_layer(self):
+        return self.GGNN
 
     def extract_feature(self, x):
         out = self.layer1(x)

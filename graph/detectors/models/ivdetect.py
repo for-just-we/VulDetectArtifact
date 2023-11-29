@@ -33,6 +33,7 @@ class IVDetectModel(nn.Module):
         self.hidden_dim = model_args.hidden_size
         self.num_node_feature = model_args.num_node_features
         self.num_classes = model_args.num_classes
+        self.input_size = model_args.feature_representation_size
         self.feature_representation_size = model_args.feature_representation_size
         self.drop_out_rate = model_args.dropout_rate
         self.layer_num = model_args.num_layers
@@ -63,6 +64,9 @@ class IVDetectModel(nn.Module):
 
         self.final_layer = nn.Linear(self.h_size, self.num_classes)
 
+    @property
+    def key_layer(self):
+        return self.convs[-1]
 
     def vectorize_graph(self, data: Tuple[List[torch.Tensor], List[Tuple], List[torch.Tensor],
                                           List[torch.Tensor], List[torch.Tensor], torch.LongTensor, int], device) -> Data:

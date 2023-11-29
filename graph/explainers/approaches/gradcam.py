@@ -53,7 +53,6 @@ class GradCAM(WalkBase):
         attr_wo_relu = self.explain_method.attribute(x, ex_label, additional_forward_args=edge_index)   # [num_node, 1]
         mask = normalize(attr_wo_relu.relu())
         mask = mask.squeeze()
-        sorted_results = mask.sort(descending=True)
         # mask = (mask[self_loop_edge_index[0]] + mask[self_loop_edge_index[1]]) / 2
         # mask = self.control_sparsity(mask, kwargs.get('sparsity'))
         # Store related predictions for further evaluation.
@@ -62,7 +61,12 @@ class GradCAM(WalkBase):
         #     with self.connect_mask(self):
         #         related_preds = self.eval_related_pred(x, edge_index, masks, **kwargs)
 
-        return mask.detach(), sorted_results.indices.cpu(), edge_index
+        return mask.detach()
+
+    def explain(self, x, edge_index):
+        mask = self.forward(x, edge_index)
+        sorted_results = mask.sort(descending=True)
+        return sorted_results, True
 
 
 class GraphLayerGradCam(ca.LayerGradCam):
