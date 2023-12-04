@@ -68,6 +68,7 @@ class GNNExplainer(ExplainerBase):
             ent = -m * torch.log(m + EPS) - (1 - m) * torch.log(1 - m + EPS)
             loss = loss + self.coeffs['node_feat_ent'] * ent.mean()
 
+        loss = loss.requires_grad_(True)
         return loss
 
     def gnn_explainer_alg(self, x: Tensor, edge_index: Tensor, ex_label: Tensor, mask_features: bool = False, **kwargs) -> None:
@@ -138,12 +139,12 @@ class GNNExplainer(ExplainerBase):
         # with torch.no_grad():
         #     related_preds = self.eval_related_pred(x, edge_index, edge_masks, **kwargs)
         self.__clear_masks__()
-        sorted_results = edge_mask.sort(descending=True)
+        # sorted_results = edge_mask.sort(descending=True)
         return edge_mask.detach()
 
     def explain(self, x, edge_index):
         edge_mask = self.forward(x, edge_index)
-        sorted_indices = edge_mask.sort(descending=True)
+        sorted_indices = edge_mask.sort(descending=True).indices.cpu()
         return sorted_indices, False
 
 

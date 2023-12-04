@@ -49,7 +49,7 @@ class BaseExplainerUtil:
 
     def construct_explainer(self, explainer_name: str):
         cls = explainer_classes[explainer_name]
-        explainer = cls(self.gnnNets)
+        explainer = cls(self.gnnNets, device=self.device)
         return explainer
 
 

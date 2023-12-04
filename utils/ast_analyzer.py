@@ -2,6 +2,7 @@ from typing import List, Set, Dict
 from utils.ast_traverse_util import ASTProvider, VariableEnvironment, VarDeclEnvironment, \
     MemberAccessVarEnvironment, CalleeEnvironment, CallVarEnvironment, \
     ClassStaticIdentifierVarEnvironment, IdentifierVarEnvironment
+from utils.ast_def import ASTNode
 
 class ASTVarAnalyzer(object):
     def __init__(self):
@@ -66,6 +67,23 @@ class ASTVarAnalyzer(object):
         else:
             return VariableEnvironment(astProvider)
 
+class SyVCChecker(object):
+    def __init__(self, vul_funcs: Set[str]):
+        self.vul_funcs: Set[str] = vul_funcs
+
+    def visit(self, node: ASTNode):
+        if node.type == "CallExpression":
+            func_name = node.children[0].code
+            if func_name in self.vul_funcs:
+                return True
+        elif node.type in {"ArrayIndexing", "PtrMemberAccess", "AdditiveExpression", "MultiplicativeExpression"}:
+            return True
+
+        flag = False
+        for child in node.children:
+            flag |= self.visit(child)
+        return flag
+
 
 if __name__ == '__main__':
     nodes = [
@@ -79,7 +97,7 @@ if __name__ == '__main__':
         ]
 
     import json
-    from utils.ast_def import ASTNode, json2astNode
+    from utils.ast_def import json2astNode
     from utils.ast_traverse_util import ASTNodeASTProvider
     json_nodes: List[dict] = [json.loads(n) for n in nodes]
     stmts: List[ASTNode] = [json2astNode(n) for n in json_nodes]

@@ -35,16 +35,14 @@ class GNN_LRP(WalkBase):
         walk_steps, fc_steps = self.extract_step(x, edge_index, detach=False, split_fc=True)
         edge_index_with_loop, _ = add_self_loops(edge_index, num_nodes=self.num_nodes)
 
-
         walk_indices_list = torch.tensor(
             self.walks_pick(edge_index_with_loop.cpu(), list(range(edge_index_with_loop.shape[1])),
                             num_layers=self.num_layers), device=self.device)
 
-
         def compute_walk_score():
 
             # hyper-parameter gamma
-            epsilon = 1e-30   # prevent from zero division
+            epsilon = 1e-30  # prevent from zero division
             gamma = [2, 1, 1]
 
             # --- record original weights of GNN ---
@@ -132,7 +130,6 @@ class GNN_LRP(WalkBase):
                     ht = (s + epsilon) * (std_h / (s + epsilon)).detach()
                     h = ht
 
-
                 f = h[0, label]
                 x_grads = torch.autograd.grad(outputs=f, inputs=x)[0]
                 I = walk_node_indices[0]
@@ -172,3 +169,4 @@ class GNN_LRP(WalkBase):
     def explain(self, x, edge_index):
         edge_mask, _ = self.forward(x, edge_index)
         sorted_indices = edge_mask.sort(descending=True).indices.cpu()
+        return sorted_indices

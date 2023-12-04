@@ -63,6 +63,7 @@ def main():
         checkpoint = torch.load(model_path)
         model.load_state_dict(checkpoint['net'])
         model.to(args.device)
+        model.eval()
         explainer_name = args.explainer
         explainer_util_cls = graph_detector_explain_utils[args.detector]
         explainer_util: BaseExplainerUtil = explainer_util_cls(w2v_model, model, args, explainer_name, args.k)
