@@ -84,6 +84,20 @@ class SyVCChecker(object):
             flag |= self.visit(child)
         return flag
 
+class CallTargetChecker(object):
+    def __init__(self, func_name_set: Set[str]):
+        self.func_name_set: Set[str] = func_name_set
+        self.called_func_names: List[str] = list()
+
+    def visit(self, node: ASTNode):
+        if node.type == "CallExpression":
+            func_name = node.children[0].code
+            if func_name in self.func_name_set:
+                self.called_func_names.append(func_name)
+
+        for child in node.children:
+            self.visit(child)
+
 
 if __name__ == '__main__':
     nodes = [
