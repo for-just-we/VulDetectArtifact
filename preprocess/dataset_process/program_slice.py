@@ -1,5 +1,5 @@
 import json
-import os
+from tqdm import tqdm
 import sys
 from typing import List, Dict, Union, DefaultDict, Set
 from collections import defaultdict
@@ -15,6 +15,7 @@ def group_by_testcase(datas: List[Dict[str, Union[str, List[str]]]]) -> \
     group_datas: DefaultDict[str, List[Dict[str, Union[str, List[str]]]]] = defaultdict(list)
     for cpg in datas:
         testcase_id = cpg["testcase-path"]
+        testcase_id = '/'.join(testcase_id.split('/')[:5])
         group_datas[testcase_id].append(cpg)
     return group_datas
 
@@ -29,7 +30,7 @@ class SlicingTool:
         # func_name --> call target name --> node idx
         self.func_name2call_target: DefaultDict[str, Dict[str, int]] = defaultdict(dict)
         # func_name --> node idx --> call target names
-        self.func_name2call_target_reverse: DefaultDict[str, DefaultDict[int, List[str]]] = defaultdict(defaultdict(list))
+        self.func_name2call_target_reverse: DefaultDict[str, DefaultDict[int, List[str]]] = defaultdict(lambda: defaultdict(list))
         self.key_line_set: DefaultDict[str, Set[int]] = defaultdict(set)
 
         for data in datas:
@@ -38,9 +39,10 @@ class SlicingTool:
     def build_key_query_structure(self, data: Dict[str, Union[str, List[str]]]):
         syse_checker = SyVCChecker(self.vul_funcs)
         func_name: str = data["functionName"]
-        assert func_name not in self.func_name2param_idx.keys()
+        if func_name in self.func_name2param_idx.keys():
+            return
         json_nodes: List[str] = data["nodes"]
-        for i, json_node_str in json_nodes:
+        for i, json_node_str in enumerate(json_nodes):
             json_node: Dict[str, Union[int, list]] = json.loads(json_node_str)
             ast_node: ASTNode = json2astNode(json_node)
 
@@ -59,12 +61,21 @@ class SlicingTool:
                 self.func_name2call_target[func_name][called_func_name] = i
                 self.func_name2call_target_reverse[func_name][i].append(called_func_name)
 
+    def run_slice(self):
+        for func_name, key_lines in self.key_line_set.items():
+            pass
+
 
 def main():
     json_data_path = sys.argv[1]
+    sensiAPIs: Set[str] = set(open("sensiAPI.txt", 'r', encoding='utf-8').read().split(','))
     datas: List[Dict[str, Union[str, List[str]]]] = json.load(open(json_data_path, 'r', encoding='utf-8'))
     group_datas: DefaultDict[str, List[Dict[str, Union[str, List[str]]]]] = group_by_testcase(datas)
-    print()
+
+    for testcase_id, test_case_datas in tqdm(group_datas.items(), desc="processing datas"):
+        slicing_tool = SlicingTool(sensiAPIs, test_case_datas)
+        pass
+
 
 if __name__ == '__main__':
     main()
