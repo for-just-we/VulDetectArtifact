@@ -74,6 +74,7 @@ def main():
 
     for testcase_id, test_case_datas in tqdm(group_datas.items(), desc="processing datas"):
         slicing_tool = SlicingTool(sensiAPIs, test_case_datas)
+        slicing_tool.run_slice()
         pass
 
 

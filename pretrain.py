@@ -12,6 +12,8 @@ from graph.detectors.models.reveal import model_args as reveal_model_args
 from graph.detectors.models.ivdetect import model_args as ivdetect_model_args
 from graph.detectors.detector_utils.ivdetect_util import lexical_parse
 
+from sequence.detectors.models.tokenlstm import model_args as tl_model_args
+
 # pretrain embedding models for detectors
 window_size = 10
 
@@ -19,7 +21,9 @@ w2v_sizes = {
     "deepwukong": dwk_model_args.vector_size,
     "devign": devign_model_args.vector_size,
     "reveal": reveal_model_args.vector_size,
-    "ivdetect": ivdetect_model_args.feature_representation_size
+    "ivdetect": ivdetect_model_args.feature_representation_size,
+
+    "tokenlstm": tl_model_args.vector_size
 }
 
 class Sentences:
@@ -39,11 +43,24 @@ class Sentences:
                         statement_after_split = nltk.word_tokenize(graph_data["contents"][0][1])
                     yield statement_after_split
             # deepwukong
-            else:
+            elif self.detector == "deepwukong":
                 contents = graph_data["nodes-line-sym"]
                 for statement in contents:
                     statement_after_split = nltk.word_tokenize(statement)
                     yield statement_after_split
+
+            elif self == "tokenlstm":
+                contents: List[str] = list()
+                json_contents = graph_data["nodes"]
+                for json_content in json_contents:
+                    graph_data: Dict = json.loads(json_content)
+                    statement_after_split = nltk.word_tokenize(graph_data["contents"][0][1])
+                    contents.extend(statement_after_split)
+                yield contents
+
+            else:
+                raise RuntimeError("unsupported detector")
+
 
 if __name__ == '__main__':
     # name of detector, choice is deepwukong, ivdetect, reveal, devign
