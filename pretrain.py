@@ -49,17 +49,14 @@ class Sentences:
                     statement_after_split = nltk.word_tokenize(statement)
                     yield statement_after_split
 
-            elif self == "tokenlstm":
+            # Sequence Based Detector
+            else:
                 contents: List[str] = list()
-                json_contents = graph_data["nodes"]
+                json_contents: List[str] = graph_data["node-line-content"]
                 for json_content in json_contents:
-                    graph_data: Dict = json.loads(json_content)
-                    statement_after_split = nltk.word_tokenize(graph_data["contents"][0][1])
+                    statement_after_split = nltk.word_tokenize(json_content)
                     contents.extend(statement_after_split)
                 yield contents
-
-            else:
-                raise RuntimeError("unsupported detector")
 
 
 if __name__ == '__main__':

@@ -3,7 +3,7 @@ from tap import Tap
 class ModelParser(Tap):
     hidden_size: int = 128  # GNN隐层向量维度
     num_classes: int = 2
-    vector_size = 13
+    vector_size = 30
     maxLen = 500
     layer_num = 2
     dropout = 0.2
@@ -17,8 +17,13 @@ from keras.layers.recurrent import GRU
 from keras.layers.wrappers import Bidirectional
 
 def build_model():
+    """
+    输入参数：embedding初始weight
+    """
     print('Build model...')
     model = Sequential()
+    # Embedding trainable参数设置为False
+    # model.add(Embedding(weight.shape[0], conf.vectorDim, mask_zero=True, weights=[weight], trainable=False))
     model.add(Masking(mask_value=1.0, input_shape=(model_args.maxLen, model_args.vector_size)))
 
     for i in range(1, model_args.layer_num):

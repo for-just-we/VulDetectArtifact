@@ -9,6 +9,14 @@ from graph.detectors.models.devign import DevignModel
 from graph.detectors.models.reveal import ClassifyModel
 from graph.detectors.models.ivdetect import IVDetectModel
 
+from sequence.detectors.models.tokenlstm import build_model as tl_build_model
+from sequence.detectors.models.vuldeepecker import build_model as vdp_build_model
+from sequence.detectors.models.sysyer import build_model as syse_build_model
+from sequence.detectors.train_util import SequenceTrainUtil
+
+from keras.models import load_model
+
+import os
 import argparse
 
 dwk: str = "deepwukong"
@@ -28,7 +36,13 @@ graph_detector_models = {dwk: DeepWuKongModel,
                               ivdetect: IVDetectModel,
                               devign: DevignModel}
 
-sequence_detectors = ["tokenlstm", "vuldeepecker", "sysevr"]
+sequence_detector_models = {
+    tokenlstm: tl_build_model,
+    vdp: vdp_build_model,
+    sysevr: syse_build_model
+}
+
+sequence_detectors = [name for name in sequence_detector_models.keys()]
 graph_detectors = [name for name in graph_detector_models.keys()]
 
 def build_arg_parser():
@@ -62,6 +76,22 @@ def main():
         train_util_cls = graph_detector_train_utils[args.detector]
         model = model_cls()
         train_util: BaseTrainUtil = train_util_cls(w2v_model, model, args)
+        if args.train:
+            print("training {} start:".format(args.detector))
+            train_util.train()
+        if args.test:
+            print("testing {} start:".format(args.detector))
+            train_util.test()
+
+    # 训练sequence detectors
+    elif args.detector in sequence_detectors:
+        # 如果已经存在detector文件，则加载
+        model_path = f"{args.model_dir}/{args.detector}.h5"
+        if os.path.exists(model_path):
+            model = load_model(model_path)
+        else:
+            model = sequence_detector_models[args.detector]()
+        train_util: SequenceTrainUtil = SequenceTrainUtil(w2v_model, model, args, model_path)
         if args.train:
             print("training {} start:".format(args.detector))
             train_util.train()
