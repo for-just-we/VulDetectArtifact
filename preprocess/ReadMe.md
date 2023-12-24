@@ -80,6 +80,10 @@ The content of json format function data is like, we transform the `dict` and `l
 }
 ```
 
+## 2.2.Sequence representation
+
+program_slice: run `python program_slice.py <input_json_file> <output_json_file>`. Where `<input_json_file>` is the json parsed from Joern, `<output_json_file>` is the dumped slices.
+
 
 
 # 3.label and deduplication datas
