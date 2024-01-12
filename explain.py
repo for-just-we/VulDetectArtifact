@@ -12,6 +12,8 @@ from graph.explainers.load_utils.detector_explain_utils import RevealExplainerUt
     IVDetectExplainerUtil, DevignExplainerUtil, DeepWuKongExplainerUtil
 from graph.explainers.load_utils.base_explain_util import BaseExplainerUtil
 
+from keras.models import load_model
+from sequence.detectors.train_util import SequenceTrainUtil
 
 
 dwk: str = "deepwukong"
@@ -46,7 +48,8 @@ def build_arg_parser():
     parser.add_argument("--w2v_model_path", type=str, required=True, help="path to word2vec model")
     parser.add_argument("--detector", type=str, required=True, help="the detector name here.", choices=graph_detectors + sequence_detectors)
 
-    parser.add_argument("--explainer", type=str, required=True, choices={"gnnexplainer", "pgexplainer", "gradcam", "deeplift", "gnnlrp"})
+    parser.add_argument("--explainer", type=str, required=True, choices={"gnnexplainer", "pgexplainer", "gradcam", "deeplift", "gnnlrp",
+                                                                         "SHAP", "GradInput", "LRP", "DeepLift"})
     parser.add_argument("--k", type=int, default=5, help="max_node num in explanation results")
     return parser
 
@@ -54,7 +57,7 @@ def main():
     parser = build_arg_parser()
     args = parser.parse_args()
     w2v_model: Word2Vec = Word2Vec.load(args.w2v_model_path)
-    # 训练graph detectors
+    # explain graph-based detectors
     if args.detector in graph_detector_models.keys():
         model_cls = graph_detector_models[args.detector]
         need_node_emb_flag = (args.explainer == "pgexplainer")
@@ -68,6 +71,12 @@ def main():
         explainer_util_cls = graph_detector_explain_utils[args.detector]
         explainer_util: BaseExplainerUtil = explainer_util_cls(w2v_model, model, args, explainer_name, args.k)
         explainer_util.test()
+
+    # explain sequence-based detectors
+    elif args.detector in sequence_detectors:
+        model_path = f"{args.model_dir}/{args.detector}.h5"
+        model = load_model(model_path)
+
 
 
 if __name__ == '__main__':
