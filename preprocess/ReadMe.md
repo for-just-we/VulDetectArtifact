@@ -28,7 +28,7 @@ specifically, we use old version of [Joern](https://github.com/octopus-platform/
 Also, we recently notice another tool [cpg](https://github.com/Fraunhofer-AISEC/cpg), we found it much easier to use than Joern. 
 It is based on eclipse CDT to parse, produce less syntax error than old version of Joern.
 It can also produce inter-procedural data-flow graph in a single file.
-We will provide another pipeline driven by cpg.
+We provide another parsing tool based-on cpg named [CodeGraphAnalyzer](https://github.com/for-just-we/CodeGraphAnalyzer).
 
 ## 2.1.graph data generation
 

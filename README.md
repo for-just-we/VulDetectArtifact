@@ -1,6 +1,5 @@
 # VulDetectArtifact
- Artifact for TOSEM. (Note: we are still organizing our code into a single pipeline. Remaining codes is gradually being released.) 
-
+ Artifact for TOSEM paper: [Beyond Fidelity: Explaining Vulnerability Localization of Learning-based Detectors](https://arxiv.org/abs/2401.02686).
 
 # 1.Datasets
 
@@ -49,3 +48,17 @@ Run `python explain.py <args>`. `<args> includes`:
 - `--model_dir <model_dir>`, `<model_dir>` is where the model pth file placed, it's corresponding directory. The scripts will automatically load the best model in the dir.
 
 - `--explainer <explainer_name>`, `<explainer_name>` could be one of `["gnnexplainer", "pgexplainer", "gnnlrp", "gradcam", "deeplift"]` for now. We are organizing the code in sequence-based explainers into this pipeline.
+
+
+# 6.Citation
+
+```
+@misc{cheng2024fidelity,
+      title={Beyond Fidelity: Explaining Vulnerability Localization of Learning-based Detectors}, 
+      author={Baijun Cheng and Shengming Zhao and Kailong Wang and Meizhen Wang and Guangdong Bai and Ruitao Feng and Yao Guo and Lei Ma and Haoyu Wang},
+      year={2024},
+      eprint={2401.02686},
+      archivePrefix={arXiv},
+      primaryClass={cs.CR}
+}
+```

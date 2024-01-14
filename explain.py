@@ -13,7 +13,7 @@ from graph.explainers.load_utils.detector_explain_utils import RevealExplainerUt
 from graph.explainers.load_utils.base_explain_util import BaseExplainerUtil
 
 from keras.models import load_model
-from sequence.detectors.train_util import SequenceTrainUtil
+from sequence.explainer.explain_util import SequenceExplainUtil
 
 
 dwk: str = "deepwukong"
@@ -76,7 +76,8 @@ def main():
     elif args.detector in sequence_detectors:
         model_path = f"{args.model_dir}/{args.detector}.h5"
         model = load_model(model_path)
-
+        sequence_explain_util = SequenceExplainUtil(w2v_model, model, args)
+        sequence_explain_util.explain()
 
 
 if __name__ == '__main__':
